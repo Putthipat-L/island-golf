@@ -1,0 +1,110 @@
+<title>ตัวละครคุณแม่</title>
+<style>
+/* Layout: turntable viewer on the left, reference photo + controls in a side panel (stacks under the viewer on phones) */
+:root {
+  --sky-top: #f7dfc6;
+  --sky-mid: #f1b8cd;
+  --sky-low: #bdb3e6;
+  --cream: #fffaf2;
+  --ink: #3a2a33;
+  --ink-soft: #7a6470;
+  --coral: #ee6f5a;
+  --line: rgba(58, 42, 51, 0.12);
+  --f-display: 'Mitr', 'Anuphan', system-ui, sans-serif;
+  --f-body: 'Anuphan', 'Mitr', system-ui, sans-serif;
+  color-scheme: light;
+}
+html, body { height: 100%; }
+body { margin: 0; background: var(--cream); color: var(--ink); font-family: var(--f-body); }
+.app { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 320px; }
+.stage { position: relative; min-height: 0; background: linear-gradient(180deg, var(--sky-top), var(--sky-mid) 55%, var(--sky-low)); overflow: hidden; touch-action: none; cursor: grab; }
+.stage:active { cursor: grabbing; }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.badge { position: absolute; left: 16px; top: calc(14px + env(safe-area-inset-top, 0px)); display: flex; gap: 8px; align-items: center; pointer-events: none; }
+.badge b { font: 600 13px/1 var(--f-display); letter-spacing: 0.06em; background: var(--ink); color: var(--cream); padding: 7px 12px; border-radius: 99px; }
+.badge span { font-size: 12.5px; color: var(--ink); background: rgba(255, 250, 242, 0.75); padding: 6px 10px; border-radius: 99px; }
+.hint { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); font-size: 12.5px; color: var(--ink); background: rgba(255, 250, 242, 0.78); padding: 6px 12px; border-radius: 99px; white-space: nowrap; pointer-events: none; }
+.panel { overflow: auto; padding: 20px 18px calc(20px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 18px; align-content: start; border-left: 1px solid var(--line); }
+.panel h1 { margin: 0; font: 600 22px/1.2 var(--f-display); }
+.panel p.sub { margin: 4px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-soft); }
+.ref { display: grid; grid-template-columns: 112px 1fr; gap: 12px; align-items: center; }
+.ref figure { margin: 0; background: #fff; padding: 6px 6px 18px; box-shadow: 0 8px 18px rgba(58, 42, 51, 0.16); transform: rotate(-2deg); }
+.ref img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; object-position: 50% 28%; }
+.ref span { font-size: 13px; line-height: 1.5; color: var(--ink-soft); }
+.group h2 { margin: 0 0 8px; font: 500 12.5px/1 var(--f-display); letter-spacing: 0.08em; color: var(--ink-soft); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { font: 500 14px/1 var(--f-display); color: var(--ink); background: rgba(58, 42, 51, 0.06); border: 0; border-radius: 99px; padding: 9px 14px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--cream); }
+.seg button:focus-visible { outline: 3px solid var(--coral); outline-offset: 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips span { font-size: 12.5px; padding: 6px 10px; border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); }
+.note { font-size: 13px; line-height: 1.55; color: var(--ink-soft); margin: 0; padding: 10px 12px; border-radius: 12px; background: rgba(238, 111, 90, 0.08); }
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: minmax(340px, 62vh) auto; height: auto; min-height: 100%; }
+  .panel { border-left: 0; border-top: 1px solid var(--line); padding-left: 16px; padding-right: 16px; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  .app { grid-template-columns: minmax(0, 1fr) 280px; }
+  .panel { gap: 12px; padding-top: 12px; }
+  .ref { grid-template-columns: 84px 1fr; }
+}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600&family=Mitr:wght@400;500;600&display=swap">
+
+<div class="app">
+  <div class="stage" id="stage">
+    <canvas id="cv" aria-label="โมเดล 3 มิติของตัวละครคุณแม่"></canvas>
+    <div class="badge"><b>ใช้ในเกมแล้ว</b><span>ตัวละครแบบปั้น ไม่ใช้รูปถ่าย</span></div>
+    <div class="hint">ลากเพื่อหมุน · เลื่อนหรือถ่างนิ้วเพื่อซูม</div>
+  </div>
+  <aside class="panel">
+    <div>
+      <h1>ตัวละครคุณแม่</h1>
+      <p class="sub">หน้าตาแบบการ์ตูนที่ปั้นให้คล้ายคุณแม่ ตรวจผ่านแล้วค่อยใส่เข้าเกม Island Golf</p>
+    </div>
+    <div class="ref">
+      <figure><img id="ref-img" alt="รูปอ้างอิงของคุณแม่"></figure>
+      <span>รูปอ้างอิงที่ใช้ปั้น เทียบกับโมเดลได้เลย</span>
+    </div>
+    <div class="group">
+      <h2>มุมกล้อง</h2>
+      <div class="seg" id="views">
+        <button data-view="face" aria-pressed="true">ใกล้หน้า</button>
+        <button data-view="front" aria-pressed="false">ด้านหน้า</button>
+        <button data-view="three" aria-pressed="false">เฉียง</button>
+        <button data-view="side" aria-pressed="false">ด้านข้าง</button>
+        <button data-view="back" aria-pressed="false">ด้านหลัง</button>
+      </div>
+    </div>
+    <div class="group">
+      <h2>ท่าทาง</h2>
+      <div class="seg" id="poses">
+        <button data-pose="stand" aria-pressed="true">ยืน</button>
+        <button data-pose="wave" aria-pressed="false">โบกมือ</button>
+        <button data-pose="walk" aria-pressed="false">เดิน</button>
+        <button data-pose="swing" aria-pressed="false">ท่าตี</button>
+      </div>
+    </div>
+    <div class="group">
+      <h2>หมุนโมเดล</h2>
+      <div class="seg"><button id="spin" aria-pressed="false">หมุนรอบตัวเอง</button></div>
+    </div>
+    <div class="group">
+      <h2>สิ่งที่ปั้นตามรูป</h2>
+      <div class="chips">
+        <span>แว่นกรอบบางทรงสี่เหลี่ยม</span><span>ยิ้มกว้างเห็นฟัน</span><span>ตายิ้มหยี</span><span>ผมยาวประบ่า ดัดลอน</span><span>แสกข้าง หน้าม้าปัดเฉียง</span><span>ผมสีน้ำตาลอมแดง</span><span>เสื้อยืดขาว</span><span>ยีนส์ฟ้าอ่อน</span><span>สร้อยคอเงิน</span>
+      </div>
+    </div>
+    <p class="note">บอกจุดที่อยากแก้ได้เลย เช่น ตาใหญ่ขึ้น ยิ้มน้อยลง ผมยาวขึ้น สีผมเข้มขึ้น หรือแว่นหนาขึ้น แล้วผมจะทำร่างถัดไป</p>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+(function () {
+'use strict';
+if (!window.THREE) { document.querySelector('.hint').textContent = 'โหลดเอนจิน 3D ไม่สำเร็จ ลองรีเฟรชหน้าอีกครั้ง'; return; }
+/*__CHAR__*/
+/*__STUDIO__*/
+})();
+</script>

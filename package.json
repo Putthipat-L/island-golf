@@ -1,0 +1,17 @@
+{
+  "name": "island-golf",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Island Golf — เกมกอล์ฟ 3D บนเกาะ low-poly เล่นบนเว็บ พร้อมฉากอวยพรวันเกิดคุณแม่ตอนจบ",
+  "scripts": {
+    "build": "python3 build.py && python3 build_studio.py",
+    "build:artifact": "python3 build.py --fragment && python3 build_studio.py --fragment",
+    "serve": "python3 -m http.server 8000",
+    "test": "python3 test/run_all.py"
+  },
+  "devDependencies": {
+    "@fontsource/anuphan": "^5.3.0",
+    "@fontsource/mitr": "^5.3.0",
+    "three": "0.160.0"
+  }
+}
