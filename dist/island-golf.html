@@ -941,7 +941,12 @@ function initWorld(canvas) {
   scene.add(World.clouds);
   // browser bars sliding in and out fire bursts of resize events: resize the canvas once per frame at most
   let resizeQ = 0;
-  window.addEventListener('resize', () => { if (!resizeQ) resizeQ = requestAnimationFrame(() => { resizeQ = 0; onResize(); }); });
+  const queue = () => { if (!resizeQ) resizeQ = requestAnimationFrame(() => { resizeQ = 0; onResize(); }); };
+  window.addEventListener('resize', queue);
+  // an iPhone home-screen app can still report the old (portrait) size right after rotating, which squashes
+  // the 3D view: watch the canvas element itself, and check again a little after every rotation
+  if (window.ResizeObserver) new ResizeObserver(queue).observe(canvas);
+  window.addEventListener('orientationchange', () => [150, 450, 1000].forEach(ms => setTimeout(() => window.dispatchEvent(new Event('resize')), ms)));
 }
 
 const ATMOS = {
@@ -979,8 +984,14 @@ function makeHills() {
   return g;
 }
 
+// size of the canvas as laid out on screen (more reliable than window.innerWidth/innerHeight on iOS)
+function viewSize() {
+  const c = World.renderer && World.renderer.domElement;
+  return { w: (c && c.clientWidth) || window.innerWidth, h: (c && c.clientHeight) || window.innerHeight };
+}
 function onResize() {
-  const w = window.innerWidth, h = window.innerHeight;
+  const { w, h } = viewSize();
+  World.viewW = w; World.viewH = h;
   World.renderer.setSize(w, h, false);
   World.camera.aspect = w / h;
   World.camera.fov = w / h < 1 ? 68 : 55;
@@ -2087,8 +2098,11 @@ const UI = {
     });
     window.addEventListener('resize', () => { this.sizeMini(); if (Game.overlay === 'map-ov') this.drawBigMap(); });
     this.sizeMini();
-    const mq = () => { $('rotate-hint').hidden = !(window.innerHeight > window.innerWidth * 1.15 && window.innerWidth < 700 && Game.mode !== 'title'); };
+    const mq = () => { const app = $('app'), w = app.clientWidth || window.innerWidth, h = app.clientHeight || window.innerHeight;
+      $('rotate-hint').hidden = !(h > w * 1.15 && w < 700 && Game.mode !== 'title'); };
     window.addEventListener('resize', mq); this.rotateCheck = mq;
+    // iPhone home-screen apps may not report the new size after rotating: follow the layout itself
+    if (window.ResizeObserver) new ResizeObserver(() => { this.sizeMini(); mq(); }).observe($('app'));
   },
 
   initPower() {
@@ -2197,7 +2211,7 @@ const UI = {
     v.project(cam);
     let nx = v.x, ny = v.y, edge = false;
     if (camSpace.z > 0) { nx = -nx; ny = -1; edge = true; }
-    const W = window.innerWidth, Hh = window.innerHeight;
+    const W = World.viewW || window.innerWidth, Hh = World.viewH || window.innerHeight;
     let sx = (nx * 0.5 + 0.5) * W, sy = (-ny * 0.5 + 0.5) * Hh;
     if (clampEdge) {
       const mx = 46, myT = 92, myB = 70;
@@ -3540,6 +3554,8 @@ function frame(now) {
   const raw = Math.max(0, (now - lastT) / 1000);
   const dt = Math.min(0.05, raw); lastT = now;
   if (!document.hidden) adaptQuality(raw);
+  // safety net: if the canvas was laid out at a new size without a usable resize event, catch it within half a second
+  if ((World.sizeTick = (World.sizeTick || 0) + 1) % 30 === 0) { const c = World.renderer.domElement; if (c.clientWidth && (c.clientWidth !== World.viewW || c.clientHeight !== World.viewH)) onResize(); }
   if (!testFreeze) { try { update(dt); } catch (e) { console.error(e); } }
   World.renderer.render(World.scene, World.camera);
   requestAnimationFrame(frame);

@@ -94,8 +94,11 @@ const UI = {
     });
     window.addEventListener('resize', () => { this.sizeMini(); if (Game.overlay === 'map-ov') this.drawBigMap(); });
     this.sizeMini();
-    const mq = () => { $('rotate-hint').hidden = !(window.innerHeight > window.innerWidth * 1.15 && window.innerWidth < 700 && Game.mode !== 'title'); };
+    const mq = () => { const app = $('app'), w = app.clientWidth || window.innerWidth, h = app.clientHeight || window.innerHeight;
+      $('rotate-hint').hidden = !(h > w * 1.15 && w < 700 && Game.mode !== 'title'); };
     window.addEventListener('resize', mq); this.rotateCheck = mq;
+    // iPhone home-screen apps may not report the new size after rotating: follow the layout itself
+    if (window.ResizeObserver) new ResizeObserver(() => { this.sizeMini(); mq(); }).observe($('app'));
   },
 
   initPower() {
@@ -204,7 +207,7 @@ const UI = {
     v.project(cam);
     let nx = v.x, ny = v.y, edge = false;
     if (camSpace.z > 0) { nx = -nx; ny = -1; edge = true; }
-    const W = window.innerWidth, Hh = window.innerHeight;
+    const W = World.viewW || window.innerWidth, Hh = World.viewH || window.innerHeight;
     let sx = (nx * 0.5 + 0.5) * W, sy = (-ny * 0.5 + 0.5) * Hh;
     if (clampEdge) {
       const mx = 46, myT = 92, myB = 70;

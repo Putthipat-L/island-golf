@@ -831,6 +831,8 @@ function frame(now) {
   const raw = Math.max(0, (now - lastT) / 1000);
   const dt = Math.min(0.05, raw); lastT = now;
   if (!document.hidden) adaptQuality(raw);
+  // safety net: if the canvas was laid out at a new size without a usable resize event, catch it within half a second
+  if ((World.sizeTick = (World.sizeTick || 0) + 1) % 30 === 0) { const c = World.renderer.domElement; if (c.clientWidth && (c.clientWidth !== World.viewW || c.clientHeight !== World.viewH)) onResize(); }
   if (!testFreeze) { try { update(dt); } catch (e) { console.error(e); } }
   World.renderer.render(World.scene, World.camera);
   requestAnimationFrame(frame);

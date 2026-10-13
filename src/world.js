@@ -98,7 +98,12 @@ function initWorld(canvas) {
   scene.add(World.clouds);
   // browser bars sliding in and out fire bursts of resize events: resize the canvas once per frame at most
   let resizeQ = 0;
-  window.addEventListener('resize', () => { if (!resizeQ) resizeQ = requestAnimationFrame(() => { resizeQ = 0; onResize(); }); });
+  const queue = () => { if (!resizeQ) resizeQ = requestAnimationFrame(() => { resizeQ = 0; onResize(); }); };
+  window.addEventListener('resize', queue);
+  // an iPhone home-screen app can still report the old (portrait) size right after rotating, which squashes
+  // the 3D view: watch the canvas element itself, and check again a little after every rotation
+  if (window.ResizeObserver) new ResizeObserver(queue).observe(canvas);
+  window.addEventListener('orientationchange', () => [150, 450, 1000].forEach(ms => setTimeout(() => window.dispatchEvent(new Event('resize')), ms)));
 }
 
 const ATMOS = {
@@ -136,8 +141,14 @@ function makeHills() {
   return g;
 }
 
+// size of the canvas as laid out on screen (more reliable than window.innerWidth/innerHeight on iOS)
+function viewSize() {
+  const c = World.renderer && World.renderer.domElement;
+  return { w: (c && c.clientWidth) || window.innerWidth, h: (c && c.clientHeight) || window.innerHeight };
+}
 function onResize() {
-  const w = window.innerWidth, h = window.innerHeight;
+  const { w, h } = viewSize();
+  World.viewW = w; World.viewH = h;
   World.renderer.setSize(w, h, false);
   World.camera.aspect = w / h;
   World.camera.fov = w / h < 1 ? 68 : 55;
