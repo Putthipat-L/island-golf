@@ -21,6 +21,19 @@
 
 เปิดด้วยเบราว์เซอร์ได้เลย (ต้องต่อเน็ต เพราะโหลด three.js และฟอนต์จาก CDN)
 
+### ติดตั้งเป็นแอปบน iPhone
+
+เล่นผ่านแอปจะไม่มีแถบเบราว์เซอร์มาบังจอ จอไม่ซูมหรือเด้ง และเปิดได้แม้ไม่มีเน็ต (หลังจากเปิดครั้งแรกไปแล้ว)
+
+1. เปิดลิงก์เกมด้วย **Safari** (ต้องเป็น Safari เท่านั้น)
+2. รอให้เกมโหลดจนเห็นหน้าแรก
+3. กดปุ่ม **แชร์** (สี่เหลี่ยมมีลูกศรชี้ขึ้น) → **เพิ่มไปยังหน้าจอโฮม** (Add to Home Screen) → **เพิ่ม**
+4. เปิดเกมจากไอคอน Island Golf บนหน้าจอโฮม แล้วหมุนเครื่องเป็นแนวนอน
+
+ตอนกดบันทึกรูปที่ระลึก เครื่องจะเปิดหน้าแชร์ขึ้นมา ให้เลือก **บันทึกรูปภาพ** รูปจะเข้าไปอยู่ในแอปรูปภาพ
+
+Android: เปิดด้วย Chrome → เมนู ⋮ → **ติดตั้งแอป** หรือ **เพิ่มลงในหน้าจอหลัก**
+
 ### Push ขึ้น GitHub
 
 สร้าง repo ว่างบน GitHub ก่อน (ไม่ต้องติ๊ก README) แล้วรันในโฟลเดอร์นี้
@@ -54,6 +67,8 @@ git push -u origin main
 island-golf/
 ├── index.html            หน้า redirect ไป dist/island-golf.html (สำหรับ GitHub Pages)
 ├── vercel.json           ตั้งค่าสำหรับ Vercel (build แล้วเสิร์ฟ dist/)
+├── pwa/                  ไฟล์สำหรับติดตั้งเป็นแอป: manifest.webmanifest, sw.js (ใช้งานออฟไลน์)
+├── tools/make_icons.py   สร้างไอคอนแอปใน assets/icons/
 ├── index.src.html        HTML + CSS ทั้งหมดของเกม (มีจุดวางสคริปต์ /*__GAME__*/)
 ├── studio.src.html       หน้า preview ตัวละคร
 ├── build.py              รวม src/*.js + รูป → dist/island-golf.html
@@ -67,8 +82,9 @@ island-golf/
 │   ├── main.js           game loop ฟิสิกส์ลูก ลม กล้อง ฉากจบ เสียง
 │   └── studio.js         หน้าหมุนดูโมเดล
 ├── assets/
-│   └── letter_photo.jpg  ✏️ รูปคุณแม่ในจดหมาย (ฝังลงไฟล์ตอน build)
-├── dist/                 ไฟล์ที่ build แล้ว พร้อมเล่น
+│   ├── letter_photo.jpg  ✏️ รูปคุณแม่ในจดหมาย (ฝังลงไฟล์ตอน build)
+│   └── icons/            ไอคอนแอปบนหน้าจอโฮม
+├── dist/                 ไฟล์ที่ build แล้ว พร้อมเล่น (หน้าเกม หน้าโมเดล manifest service worker ไอคอน)
 ├── docs/
 │   ├── REQUIREMENTS.md   ความต้องการและกติกาทั้งหมด
 │   └── screenshots/
@@ -86,7 +102,7 @@ island-golf/
 ต้องมี Python 3 (ไม่ต้องลงแพ็กเกจเพิ่ม)
 
 ```bash
-python3 build.py          # → dist/island-golf.html
+python3 build.py          # → dist/island-golf.html + manifest, sw.js, icons
 python3 build_studio.py   # → dist/mom-avatar.html
 # หรือ
 npm run build
@@ -121,6 +137,7 @@ python3 test/run_all.py
 | ไฟล์ | ตรวจอะไร |
 |---|---|
 | `smoke_test.py` | โหลดหน้าได้ เริ่มหลุมได้ Iron 100% ไปได้ราว 180 หลา ปุ่มเล็งอยู่ฝั่งซ้าย |
+| `app_test.py` | ติดตั้งเป็นแอปได้ (manifest, ไอคอน) จอไม่ซูม/เด้งบนมือถือ เรนเดอร์แบบเบาบนมือถือ เปิดออฟไลน์ได้ |
 | `intro_test.py` | ฉากเปิดหลุม: มุมสูง → กล้องลงมาหน้าตัวละคร → หมุนไปด้านหลัง แตะเพื่อข้ามได้ |
 | `bot_playthrough.py` | บอทตีครบ 3 หลุมภายใต้ลมสุ่มและกรีนที่มีเนิน |
 | `finale_test.py` | ลงหลุม 3 → ฉากเปิดสะพาน → เดินถึงหีบแล้วจดหมายเปิดเอง → บันทึกรูป → ดาวน์โหลด |

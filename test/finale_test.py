@@ -11,7 +11,9 @@ with sync_playwright() as p:
         const x = H.cup.x - H.cupDir.x * 1.5, z = H.cup.z - H.cupDir.z * 1.5;
         G.ball.p.set(x, g.heightAt(H, x, z) + 0.11, z); g.teleportToBall(); g.enterAim(); g.setClub('putter');
         G.aimYaw = Math.atan2(H.cup.x - x, H.cup.z - z); g.releasePower(0.16);
+        const R = g.World.renderer, real = R.render.bind(R); R.render = () => {};
         let i = 0; for (; i < 900; i++) { g.step(1, 1/60); if (G.mode === 'finale') break; }
+        R.render = real;
         return JSON.stringify({mode: G.mode, stage: G.finStage}); })()"""))
     check(r['mode'] == 'finale', 'holing hole 3 starts the finale')
     t = 0

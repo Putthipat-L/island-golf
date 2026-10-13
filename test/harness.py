@@ -55,7 +55,7 @@ def open_game(p, w=1280, h=720, mobile=False, page=None, wait_loading=True):
     """Launch Chromium (SwiftShader WebGL) and open dist/<page>. Returns (browser, page, logs)."""
     if page: PAGE[0] = page
     b = p.chromium.launch(args=['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'])
-    ctx = b.new_context(viewport={'width': w, 'height': h}, device_scale_factor=1, is_mobile=mobile, has_touch=mobile, accept_downloads=True)
+    ctx = b.new_context(viewport={'width': w, 'height': h}, device_scale_factor=1, is_mobile=mobile, has_touch=mobile, accept_downloads=True, service_workers='block')
     pg = ctx.new_page(); pg.set_default_timeout(180000)
     logs = []
     pg.on('console', lambda m: logs.append(f'[{m.type}] {m.text}'))
@@ -64,6 +64,8 @@ def open_game(p, w=1280, h=720, mobile=False, page=None, wait_loading=True):
     pg.goto('https://game.local/')
     if wait_loading:
         pg.wait_for_function('document.getElementById("loading") && document.getElementById("loading").hidden', timeout=60000)
+        # tests drive game time themselves with __golf.step(); the real-time loop keeps drawing but stops updating
+        pg.evaluate('window.__golf && __golf.freeze()')
     return b, pg, logs
 
 def errors(logs):

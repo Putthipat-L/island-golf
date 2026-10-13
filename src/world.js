@@ -10,12 +10,17 @@ const World = {
   time: 0,
 };
 
+// phones get a lighter start (lower pixel ratio, cheaper shadows); adaptQuality tunes it from there
+const QUALITY = (() => {
+  const mobile = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  return { mobile, startPR: mobile ? 1.5 : 2, maxPR: 2, minPR: mobile ? 0.75 : 1, shadow: mobile ? 1024 : 2048 };
+})();
 function initWorld(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, QUALITY.startPR));
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = QUALITY.mobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   World.renderer = renderer;
 
@@ -32,7 +37,7 @@ function initWorld(canvas) {
   const sun = new THREE.DirectionalLight(0xfff3df, 1.75);
   sun.position.set(-40, 80, 30);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(QUALITY.shadow, QUALITY.shadow);
   const sc = sun.shadow.camera; sc.left = -45; sc.right = 45; sc.top = 45; sc.bottom = -45; sc.near = 1; sc.far = 260;
   sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.04;
   scene.add(sun); scene.add(sun.target); World.sun = sun;
@@ -91,7 +96,9 @@ function initWorld(canvas) {
 
   World.clouds = makeClouds();
   scene.add(World.clouds);
-  window.addEventListener('resize', onResize);
+  // browser bars sliding in and out fire bursts of resize events: resize the canvas once per frame at most
+  let resizeQ = 0;
+  window.addEventListener('resize', () => { if (!resizeQ) resizeQ = requestAnimationFrame(() => { resizeQ = 0; onResize(); }); });
 }
 
 const ATMOS = {

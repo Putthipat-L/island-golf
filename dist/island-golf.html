@@ -2,7 +2,15 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2aaec7">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Island Golf">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>Island Golf</title>
 <style>[hidden]{display:none!important}</style>
 </head>
@@ -33,8 +41,8 @@
   --sb: env(safe-area-inset-bottom, 0px);
   color-scheme: light;
 }
-html, body { height: 100%; }
-body { margin: 0; background: var(--sea); color: var(--ink); font-family: var(--f-body); overflow: hidden; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overscroll-behavior: none; }
+body { margin: 0; position: fixed; inset: 0; background: var(--sea); color: var(--ink); font-family: var(--f-body); overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
 #app { position: fixed; inset: 0; overflow: hidden; touch-action: none; }
 #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 button { font-family: inherit; color: inherit; cursor: pointer; border: 0; background: none; padding: 0; }
@@ -845,12 +853,17 @@ const World = {
   time: 0,
 };
 
+// phones get a lighter start (lower pixel ratio, cheaper shadows); adaptQuality tunes it from there
+const QUALITY = (() => {
+  const mobile = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  return { mobile, startPR: mobile ? 1.5 : 2, maxPR: 2, minPR: mobile ? 0.75 : 1, shadow: mobile ? 1024 : 2048 };
+})();
 function initWorld(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, QUALITY.startPR));
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = QUALITY.mobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   World.renderer = renderer;
 
@@ -867,7 +880,7 @@ function initWorld(canvas) {
   const sun = new THREE.DirectionalLight(0xfff3df, 1.75);
   sun.position.set(-40, 80, 30);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(QUALITY.shadow, QUALITY.shadow);
   const sc = sun.shadow.camera; sc.left = -45; sc.right = 45; sc.top = 45; sc.bottom = -45; sc.near = 1; sc.far = 260;
   sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.04;
   scene.add(sun); scene.add(sun.target); World.sun = sun;
@@ -926,7 +939,9 @@ function initWorld(canvas) {
 
   World.clouds = makeClouds();
   scene.add(World.clouds);
-  window.addEventListener('resize', onResize);
+  // browser bars sliding in and out fire bursts of resize events: resize the canvas once per frame at most
+  let resizeQ = 0;
+  window.addEventListener('resize', () => { if (!resizeQ) resizeQ = requestAnimationFrame(() => { resizeQ = 0; onResize(); }); });
 }
 
 const ATMOS = {
@@ -2646,16 +2661,29 @@ const UI = {
       const c = await this.composeImage();
       this.savedCanvas = c;
       $('save-img').src = c.toDataURL('image/png');
+      // make the file now so the tap on "save" can open the share sheet straight away (iOS needs the tap's activation)
+      this.saveFile = null;
+      try { const blob = await new Promise(res => c.toBlob(res, 'image/png')); if (blob) this.saveFile = new File([blob], BIRTHDAY.saveFilename, { type: 'image/png' }); } catch (e) { }
       const inClaude = !!(window.claude && typeof window.claude.use === 'function');
       const can = !!this.downloads || !inClaude;   // outside Claude a normal browser download works
       $('save-dl').hidden = !can;
-      $('save-hint').textContent = can ? 'กดปุ่มด้านล่างเพื่อบันทึกรูปลงเครื่อง' : 'กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ" เพื่อเก็บไว้ในเครื่อง';
+      $('save-hint').textContent = can ? (this.canShareFile() ? 'กดปุ่มด้านล่าง แล้วเลือก "บันทึกรูปภาพ" เพื่อเก็บลงคลังรูป' : 'กดปุ่มด้านล่างเพื่อบันทึกรูปลงเครื่อง') : 'กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ" เพื่อเก็บไว้ในเครื่อง';
       $('save-ov').hidden = false;
     } catch (e) { console.error(e); this.toast('สร้างรูปไม่สำเร็จ ลองอีกครั้ง', 'bad'); }
     btn.disabled = false; btn.textContent = old;
   },
+  canShareFile() {
+    try { return !!(this.saveFile && navigator.canShare && navigator.canShare({ files: [this.saveFile] }) && QUALITY.mobile); } catch (e) { return false; }
+  },
   downloadImage() {
     const c = this.savedCanvas; if (!c) return;
+    if (!this.downloads && this.canShareFile()) {
+      // phones: share sheet → "Save Image" puts it straight into Photos
+      navigator.share({ files: [this.saveFile], title: BIRTHDAY.title })
+        .then(() => { $('save-hint').textContent = 'บันทึกรูปเรียบร้อย'; })
+        .catch(err => { if (!err || err.name !== 'AbortError') $('save-hint').textContent = 'บันทึกไม่สำเร็จ กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ" แทน'; });
+      return;
+    }
     if (!this.downloads) {
       // standalone hosting (e.g. GitHub Pages): plain browser download
       c.toBlob(blob => {
@@ -3486,14 +3514,27 @@ function update(dt) {
 
 let lastT = 0, perfAcc = 0, perfN = 0, testFreeze = false;   // tests can freeze the real-time loop and step it by hand
 function adaptQuality(rawDt) {
+  if (rawDt > 0.2) return;   // one-off hitches (shader compile, app switch) say nothing about steady speed
   perfAcc += rawDt; perfN++;
   if (perfN >= 90) {
     const avg = perfAcc / perfN; perfAcc = 0; perfN = 0;
-    const r = World.renderer, pr = r.getPixelRatio();
-    if (avg > 0.026 && pr > 1) { r.setPixelRatio(Math.max(1, pr - 0.5)); onResize(); }
-    else if (avg < 0.014 && pr < Math.min(window.devicePixelRatio || 1, 2) && World.qualityDropped !== true) { r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2, pr + 0.25)); onResize(); }
-    if (avg > 0.026) World.qualityDropped = true;
+    const r = World.renderer, pr = r.getPixelRatio(), cap = Math.min(window.devicePixelRatio || 1, QUALITY.maxPR);
+    // below ~38 fps step down; go under 1x only when really slow (a 30 fps low-power cap shouldn't blur the game)
+    const floor = avg > 0.045 ? QUALITY.minPR : Math.max(1, QUALITY.minPR);
+    if (avg > 0.026 && pr > floor) { r.setPixelRatio(Math.max(floor, pr - 0.25)); onResize(); World.qualityDropped = true; }
+    else if (avg < 0.0135 && pr < cap && !World.qualityDropped) { r.setPixelRatio(Math.min(cap, pr + 0.25)); onResize(); }
   }
+}
+// iPhone Safari: no pinch-zoom, double-tap zoom or rubber-band scrolling of the page (overlay cards still scroll)
+function lockGestures() {
+  const opt = { passive: false };
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), opt));
+  document.addEventListener('touchmove', e => {
+    if (e.touches.length > 1) { e.preventDefault(); return; }
+    const box = e.target.closest && e.target.closest('.letter, .save-card, .sc-card, .how-card');
+    if (!box || box.scrollHeight <= box.clientHeight + 1) e.preventDefault();
+  }, opt);
+  document.addEventListener('dblclick', e => e.preventDefault(), opt);
 }
 function frame(now) {
   const raw = Math.max(0, (now - lastT) / 1000);
@@ -3568,6 +3609,7 @@ const Sound = {
 // ---------- boot ----------
 function boot() {
   const canvas = document.getElementById('gl');
+  lockGestures();
   initWorld(canvas);
   initFX();
   golfer = new Golfer();
@@ -3608,5 +3650,6 @@ try { boot(); } catch (e) { console.error(e); document.getElementById('loading-m
 })();
 </script>
 
+<script>if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
 </body>
 </html>

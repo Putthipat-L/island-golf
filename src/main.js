@@ -805,14 +805,27 @@ function update(dt) {
 
 let lastT = 0, perfAcc = 0, perfN = 0, testFreeze = false;   // tests can freeze the real-time loop and step it by hand
 function adaptQuality(rawDt) {
+  if (rawDt > 0.2) return;   // one-off hitches (shader compile, app switch) say nothing about steady speed
   perfAcc += rawDt; perfN++;
   if (perfN >= 90) {
     const avg = perfAcc / perfN; perfAcc = 0; perfN = 0;
-    const r = World.renderer, pr = r.getPixelRatio();
-    if (avg > 0.026 && pr > 1) { r.setPixelRatio(Math.max(1, pr - 0.5)); onResize(); }
-    else if (avg < 0.014 && pr < Math.min(window.devicePixelRatio || 1, 2) && World.qualityDropped !== true) { r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2, pr + 0.25)); onResize(); }
-    if (avg > 0.026) World.qualityDropped = true;
+    const r = World.renderer, pr = r.getPixelRatio(), cap = Math.min(window.devicePixelRatio || 1, QUALITY.maxPR);
+    // below ~38 fps step down; go under 1x only when really slow (a 30 fps low-power cap shouldn't blur the game)
+    const floor = avg > 0.045 ? QUALITY.minPR : Math.max(1, QUALITY.minPR);
+    if (avg > 0.026 && pr > floor) { r.setPixelRatio(Math.max(floor, pr - 0.25)); onResize(); World.qualityDropped = true; }
+    else if (avg < 0.0135 && pr < cap && !World.qualityDropped) { r.setPixelRatio(Math.min(cap, pr + 0.25)); onResize(); }
   }
+}
+// iPhone Safari: no pinch-zoom, double-tap zoom or rubber-band scrolling of the page (overlay cards still scroll)
+function lockGestures() {
+  const opt = { passive: false };
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), opt));
+  document.addEventListener('touchmove', e => {
+    if (e.touches.length > 1) { e.preventDefault(); return; }
+    const box = e.target.closest && e.target.closest('.letter, .save-card, .sc-card, .how-card');
+    if (!box || box.scrollHeight <= box.clientHeight + 1) e.preventDefault();
+  }, opt);
+  document.addEventListener('dblclick', e => e.preventDefault(), opt);
 }
 function frame(now) {
   const raw = Math.max(0, (now - lastT) / 1000);
@@ -887,6 +900,7 @@ const Sound = {
 // ---------- boot ----------
 function boot() {
   const canvas = document.getElementById('gl');
+  lockGestures();
   initWorld(canvas);
   initFX();
   golfer = new Golfer();

@@ -2,7 +2,9 @@
 import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from harness import *
 
-STOP = '''(n) => { const G = __golf.Game; let i = 0; for (; i < n; i++) { __golf.step(1, 1/60); if (G.mode === 'walk' || G.mode === 'holed' || G.mode === 'scorecard') break; }
+STOP = '''(n) => { const G = __golf.Game, R = __golf.World.renderer, real = R.render.bind(R); R.render = () => {};
+  let i = 0; for (; i < n; i++) { __golf.step(1, 1/60); if (G.mode === 'walk' || G.mode === 'holed' || G.mode === 'scorecard') break; }
+  R.render = real; __golf.render();
   return {mode: G.mode, x: G.ball.p.x, z: G.ball.p.z, strokes: G.strokes}; }'''
 
 with sync_playwright() as p:

@@ -668,16 +668,29 @@ const UI = {
       const c = await this.composeImage();
       this.savedCanvas = c;
       $('save-img').src = c.toDataURL('image/png');
+      // make the file now so the tap on "save" can open the share sheet straight away (iOS needs the tap's activation)
+      this.saveFile = null;
+      try { const blob = await new Promise(res => c.toBlob(res, 'image/png')); if (blob) this.saveFile = new File([blob], BIRTHDAY.saveFilename, { type: 'image/png' }); } catch (e) { }
       const inClaude = !!(window.claude && typeof window.claude.use === 'function');
       const can = !!this.downloads || !inClaude;   // outside Claude a normal browser download works
       $('save-dl').hidden = !can;
-      $('save-hint').textContent = can ? 'กดปุ่มด้านล่างเพื่อบันทึกรูปลงเครื่อง' : 'กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ" เพื่อเก็บไว้ในเครื่อง';
+      $('save-hint').textContent = can ? (this.canShareFile() ? 'กดปุ่มด้านล่าง แล้วเลือก "บันทึกรูปภาพ" เพื่อเก็บลงคลังรูป' : 'กดปุ่มด้านล่างเพื่อบันทึกรูปลงเครื่อง') : 'กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ" เพื่อเก็บไว้ในเครื่อง';
       $('save-ov').hidden = false;
     } catch (e) { console.error(e); this.toast('สร้างรูปไม่สำเร็จ ลองอีกครั้ง', 'bad'); }
     btn.disabled = false; btn.textContent = old;
   },
+  canShareFile() {
+    try { return !!(this.saveFile && navigator.canShare && navigator.canShare({ files: [this.saveFile] }) && QUALITY.mobile); } catch (e) { return false; }
+  },
   downloadImage() {
     const c = this.savedCanvas; if (!c) return;
+    if (!this.downloads && this.canShareFile()) {
+      // phones: share sheet → "Save Image" puts it straight into Photos
+      navigator.share({ files: [this.saveFile], title: BIRTHDAY.title })
+        .then(() => { $('save-hint').textContent = 'บันทึกรูปเรียบร้อย'; })
+        .catch(err => { if (!err || err.name !== 'AbortError') $('save-hint').textContent = 'บันทึกไม่สำเร็จ กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ" แทน'; });
+      return;
+    }
     if (!this.downloads) {
       // standalone hosting (e.g. GitHub Pages): plain browser download
       c.toBlob(blob => {

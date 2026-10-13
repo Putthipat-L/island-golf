@@ -2,7 +2,7 @@
 import subprocess, sys, pathlib
 here = pathlib.Path(__file__).parent
 failed = []
-for name in ('smoke_test.py', 'intro_test.py', 'bot_playthrough.py', 'finale_test.py', 'studio_test.py'):
+for name in ('smoke_test.py', 'app_test.py', 'intro_test.py', 'bot_playthrough.py', 'finale_test.py', 'studio_test.py'):
     print(f'\n== {name}', flush=True)
     if subprocess.run([sys.executable, str(here / name)]).returncode:
         failed.append(name)
